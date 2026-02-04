@@ -1,10 +1,10 @@
 /**
  * MCP List Page - Minimal SSR loader example
  */
-import { useEffect, useState } from 'react';
 import { useLoaderData } from 'expo-router';
 import Head from 'expo-router/head';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 type Server = {
   id: string;
