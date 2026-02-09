@@ -118,7 +118,7 @@ function MCPList() {
   return (
     <>
       <Head>
-        <title>{count} MCP Servers</title>
+        <title>{`${count} MCP Servers`}</title>
         <meta name="description" content={`List of ${count} MCP servers available.`} />
       </Head>
       
