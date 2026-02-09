@@ -1,10 +1,11 @@
 /**
  * MCP List Page - Minimal SSR loader example
  */
-import { Link, useLoaderData } from 'expo-router';
+import { Link, useLoaderData, type ErrorBoundaryProps } from 'expo-router';
 import Head from 'expo-router/head';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type LoaderFunction } from 'expo-router/server';
+import { Suspense } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Server = {
   id: string;
@@ -23,7 +24,7 @@ function getRequestOrigin(request?: { url?: string }): string {
   }
 }
 
-export async function loader(request?: { url?: string }): Promise<LoaderData> {
+export const loader: LoaderFunction<LoaderData> = async (request, _params) => {
   const origin = getRequestOrigin(request);
   const url = `${origin}/api/registry?type=mcp`;
 
@@ -41,77 +42,7 @@ export async function loader(request?: { url?: string }): Promise<LoaderData> {
   return data.data?.servers ?? [];
 }
 
-export default function MCPListPage() {
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Workaround for Expo Router loader data key mismatch bug
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      setReady(true);
-      return;
-    }
-
-    const store = (globalThis as unknown as { __EXPO_ROUTER_LOADER_DATA__?: Record<string, LoaderData> })
-      .__EXPO_ROUTER_LOADER_DATA__;
-
-    // If data already exists under /index, we're good
-    if (store?.['/index']) {
-      setReady(true);
-      return;
-    }
-
-    // Find the data under the correct key and copy it
-    const matchKey = store && Object.keys(store).find(
-      (key) => key === '/mcp' || key === '/mcp/index' || key.includes('mcp')
-    );
-
-    if (store && matchKey) {
-      console.log('[WORKAROUND] Copying loader data from', matchKey, 'to /index');
-      store['/index'] = store[matchKey];
-      setReady(true);
-      return;
-    }
-
-    // Fallback: manually fetch
-    console.log('[WORKAROUND] No loader data found, fetching manually');
-    fetch('/api/registry?type=mcp')
-      .then((res) => res.json())
-      .then((data) => {
-        const servers = data.data?.servers ?? [];
-        const target = (globalThis as unknown as { __EXPO_ROUTER_LOADER_DATA__?: Record<string, LoaderData> })
-          .__EXPO_ROUTER_LOADER_DATA__ ||= {};
-        target['/index'] = servers;
-        setReady(true);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setReady(true);
-      });
-  }, []);
-
-  if (!ready) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.subtitle}>Loading MCP Servers...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Error</Text>
-        <Text style={styles.subtitle}>{error}</Text>
-      </View>
-    );
-  }
-
-  return <MCPList />;
-}
-
-function MCPList() {
+function MCPListContent() {
   const servers = useLoaderData<typeof loader>();
   const count = Array.isArray(servers) ? servers.length : 0;
 
@@ -120,12 +51,15 @@ function MCPList() {
       <Head>
         <title>{`${count} MCP Servers`}</title>
         <meta name="description" content={`List of ${count} MCP servers available.`} />
+        <meta property="og:title" content={`${count} MCP Servers`} />
+        <meta property="og:description" content={`List of ${count} MCP servers available.`} />
+        <meta name="twitter:card" content="summary_large_image" />
       </Head>
-      
+
       <View style={styles.container}>
         <Text style={styles.title}>MCP Servers ({count})</Text>
         <Text style={styles.subtitle}>Select a server to view details</Text>
-        
+
         {servers.map((server) => (
           <Link key={server.id} href={`/mcp/${server.id}`}>
             <Pressable>
@@ -138,6 +72,24 @@ function MCPList() {
         ))}
       </View>
     </>
+  );
+}
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Failed to load MCP servers</Text>
+      <Text style={styles.body}>{error.message}</Text>
+      <Text style={styles.retry} onPress={retry}>Try again</Text>
+    </View>
+  );
+}
+
+export default function MCPListPage() {
+  return (
+    <Suspense fallback={<Text style={styles.loading}>Loading MCP servers...</Text>}>
+      <MCPListContent />
+    </Suspense>
   );
 }
 
@@ -175,6 +127,21 @@ const styles = StyleSheet.create({
   serverArrow: {
     fontSize: 18,
     color: '#0066cc',
+  },
+  body: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  retry: {
+    fontSize: 14,
+    color: '#0066cc',
+    fontWeight: '600',
+  },
+  loading: {
+    padding: 20,
+    fontSize: 16,
+    color: '#666',
   },
   note: {
     backgroundColor: '#fff3e0',
