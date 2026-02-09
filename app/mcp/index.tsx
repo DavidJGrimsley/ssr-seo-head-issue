@@ -1,10 +1,10 @@
 /**
  * MCP List Page - Minimal SSR loader example
  */
-import { useEffect, useState } from 'react';
-import { useLoaderData } from 'expo-router';
+import { Link, useLoaderData } from 'expo-router';
 import Head from 'expo-router/head';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Server = {
   id: string;
@@ -118,7 +118,7 @@ function MCPList() {
   return (
     <>
       <Head>
-        <title>{count} MCP Servers</title>
+        <title>{`${count} MCP Servers`}</title>
         <meta name="description" content={`List of ${count} MCP servers available.`} />
       </Head>
       
@@ -127,10 +127,14 @@ function MCPList() {
         <Text style={styles.subtitle}>Select a server to view details</Text>
         
         {servers.map((server) => (
-          <View key={server.id} style={styles.serverCard}>
-            <Text style={styles.serverName}>{server.id}</Text>
-            <Text style={styles.serverArrow}>→</Text>
-          </View>
+          <Link key={server.id} href={`/mcp/${server.id}`}>
+            <Pressable>
+              <View style={styles.serverCard}>
+                <Text style={styles.serverName}>{server.id}</Text>
+                <Text style={styles.serverArrow}>→</Text>
+              </View>
+            </Pressable>
+          </Link>
         ))}
       </View>
     </>
